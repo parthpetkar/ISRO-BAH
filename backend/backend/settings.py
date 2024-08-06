@@ -38,7 +38,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'api',
     'corsheaders',
 ]
 
@@ -56,6 +55,20 @@ MIDDLEWARE = [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
 ]
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': 'redis://:2dkPk2rrcjXZCtq0Dt0sgsAKXM1KgTyL@redis-11755.c323.us-east-1-2.ec2.redns.redis-cloud.com:11755/0',  # Adjust the location and database index
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'PASSWORD': '2dkPk2rrcjXZCtq0Dt0sgsAKXM1KgTyL',  # Add your Redis password here
+        }
+    }
+}
+
+SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+SESSION_CACHE_ALIAS = 'default'
 
 ROOT_URLCONF = 'backend.urls'
 

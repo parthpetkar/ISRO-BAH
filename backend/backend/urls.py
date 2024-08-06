@@ -16,14 +16,11 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from rest_framework.routers import DefaultRouter
-from api.views import ItemViewSet
-
-router = DefaultRouter()
-router.register(r'items', ItemViewSet)
+# from api.views import cache_test_view, session_test_view
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path(r'api/', include(router.urls)),
+    # path('cache-test/', cache_test_view, name='cache-test'),
+    # path('session-test/', session_test_view, name='session-test'),
 ]
 
