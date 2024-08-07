@@ -1,7 +1,6 @@
 import './App.css';
-import gptLogo from './assets/chatgpt.svg';
+import gptLogo from './assets/chatgpt1.png';
 import addBtn from './assets/add-30.png';
-import msgIcon from './assets/message.svg';
 import home from './assets/home.svg';
 import saved from './assets/bookmark.svg';
 import rocket from './assets/rocket.svg';
@@ -9,23 +8,38 @@ import sendBtn from './assets/send.svg';
 import userIcon from './assets/user-icon.png';
 import gptImgLogo from './assets/chatgptLogo.svg';
 import { useEffect, useRef, useState } from 'react';
-import { saveChat } from './services/api';
 
 function App() {
-
   const msgEnd = useRef(null);
 
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState([
     {
-      text: "hi i am djangogpt",
+      text: "Hello! I am Geo Bot! I can assist you with your geospatial queries!",
       isBot: true
     }
   ]);
 
-  useEffect(()=>{
+  useEffect(() => {
     msgEnd.current.scrollIntoView();
-  }, [messages])
+  }, [messages]);
+
+  const sendMsg = async (text) => {
+    try {
+      const response = await fetch('http://127.0.0.1:8000/api/sample-data/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ input: text }),
+      });
+      const data = await response.json();
+      return data.message;
+    } catch (error) {
+      console.error('Error sending message:', error);
+      return 'Error: could not get response from server';
+    }
+  };
 
   const handleSend = async () => {
     const text = input;
@@ -34,32 +48,22 @@ function App() {
       ...prevMessages,
       { text, isBot: false }
     ]);
-
-    // Simulate a response from the bot (replace with actual bot response logic)
-    const botResponse = "This is a simulated response.";
-
+    const res = await sendMsg(text);
     setMessages(prevMessages => [
       ...prevMessages,
       {
-        text: botResponse,
+        text: res,
         isBot: true
       }
     ]);
-
-    // Save chat to backend
-    try {
-      await saveChat([
-        ...messages,
-        { text, isBot: false },
-        { text: botResponse, isBot: true }
-      ]);
-    } catch (error) {
-      console.error('Error saving chat', error);
-    }
   };
 
   const handleEnter = async (e) => {
     if (e.key === 'Enter') await handleSend();
+  };
+
+  const handleNewChat = () => {
+    setMessages([]);
   };
 
   return (
@@ -69,16 +73,15 @@ function App() {
           <div className="upperSideTop">
             <img src={gptLogo} alt='logo' className='logo' /><span className='brand'></span>
             <button className='midBtn' onClick={() => { window.location.reload() }}><img src={addBtn} alt='new chat' className='addBtn' />New Chat</button>
-            <div className='upperSideBottom'>
-              <button className='query'><img src={msgIcon} alt='query' />What is Programming</button>
-              <button className='query'><img src={msgIcon} alt='query' />How to use an API</button>
-            </div>
+              <button className='query' onClick={handleNewChat}>Chat 1</button>
+              <button className='query' onClick={handleNewChat}>Chat 2</button>
+              <button className='query' onClick={handleNewChat}>Chat 3</button>
           </div>
         </div>
         <div className="lowerSide">
-          <div className='listItems'><img src={home} alt='' className='listItemsImg' />Home</div>
+          {/* <div className='listItems'><img src={home} alt='' className='listItemsImg' />Home</div>
           <div className='listItems'><img src={saved} alt='' className='listItemsImg' />Saved</div>
-          <div className='listItems'><img src={rocket} alt='' className='listItemsImg' />Upgrade</div>
+          <div className='listItems'><img src={rocket} alt='' className='listItemsImg' />Upgrade</div> */}
         </div>
       </div>
 
