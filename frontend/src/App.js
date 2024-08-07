@@ -9,6 +9,7 @@ import sendBtn from './assets/send.svg';
 import userIcon from './assets/user-icon.png';
 import gptImgLogo from './assets/chatgptLogo.svg';
 import { useEffect, useRef, useState } from 'react';
+import { saveChat } from './services/api';
 
 function App() {
 
@@ -26,23 +27,6 @@ function App() {
     msgEnd.current.scrollIntoView();
   }, [messages])
 
-  const sendMsg = async (text) => {
-    try {
-      const response = await fetch('http://127.0.0.1:8000/api/sample-data/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ input: text }),
-      });
-      const data = await response.json();
-      return data.message;
-    } catch (error) {
-      console.error('Error sending message:', error);
-      return 'Error: could not get response from server';
-    }
-  };
-
   const handleSend = async () => {
     const text = input;
     setInput('');
@@ -50,14 +34,28 @@ function App() {
       ...prevMessages,
       { text, isBot: false }
     ]);
-    const res = await sendMsg(text);
+
+    // Simulate a response from the bot (replace with actual bot response logic)
+    const botResponse = "This is a simulated response.";
+
     setMessages(prevMessages => [
       ...prevMessages,
       {
-        text: res,
+        text: botResponse,
         isBot: true
       }
     ]);
+
+    // Save chat to backend
+    try {
+      await saveChat([
+        ...messages,
+        { text, isBot: false },
+        { text: botResponse, isBot: true }
+      ]);
+    } catch (error) {
+      console.error('Error saving chat', error);
+    }
   };
 
   const handleEnter = async (e) => {
