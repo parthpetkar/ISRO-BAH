@@ -1,69 +1,91 @@
 import './App.css';
 import gptLogo from './assets/chatgpt1.png';
 import addBtn from './assets/add-30.png';
-import home from './assets/home.svg';
-import saved from './assets/bookmark.svg';
-import rocket from './assets/rocket.svg';
 import sendBtn from './assets/send.svg';
 import userIcon from './assets/user-icon.png';
 import gptImgLogo from './assets/chatgptLogo.svg';
 import { useEffect, useRef, useState } from 'react';
+import { saveChatToCache, saveCacheToDb, fetchChatFromDb, fetchChats } from './services/api';
 
 function App() {
   const msgEnd = useRef(null);
-
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState([
-    {
-      text: "Hello! I am Geo Bot! I can assist you with your geospatial queries!",
-      isBot: true
-    }
-  ]);
+  const [messages, setMessages] = useState([]);
+  const [, setChatId] = useState(null);
+  const [previousChats, setPreviousChats] = useState([]);
 
   useEffect(() => {
     msgEnd.current.scrollIntoView();
   }, [messages]);
 
-  const sendMsg = async (text) => {
-    try {
-      const response = await fetch('http://127.0.0.1:8000/api/sample-data/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ input: text }),
-      });
-      const data = await response.json();
-      return data.message;
-    } catch (error) {
-      console.error('Error sending message:', error);
-      return 'Error: could not get response from server';
-    }
-  };
+  useEffect(() => {
+    const loadChats = async () => {
+      try {
+        const chats = await fetchChats();
+        setPreviousChats(chats);
+      } catch (error) {
+        console.error('Error loading chats', error);
+      }
+    };
+    loadChats();
+  }, []);
 
   const handleSend = async () => {
     const text = input;
     setInput('');
-    setMessages(prevMessages => [
-      ...prevMessages,
-      { text, isBot: false }
-    ]);
-    const res = await sendMsg(text);
-    setMessages(prevMessages => [
-      ...prevMessages,
-      {
-        text: res,
-        isBot: true
-      }
-    ]);
+    const userMessage = { text, isBot: false };
+    setMessages(prevMessages => [...prevMessages, userMessage]);
+
+    // Simulate a bot response (replace with actual bot response logic)
+    const botResponse = "This is a simulated response.";
+    const newMessages = [
+      ...messages,
+      userMessage,
+      { text: botResponse, isBot: true }
+    ];
+    setMessages(newMessages);
+
+    // Save chat to cache
+    try {
+      await saveChatToCache(newMessages);
+    } catch (error) {
+      console.error('Error saving chat to cache', error);
+    }
   };
 
   const handleEnter = async (e) => {
     if (e.key === 'Enter') await handleSend();
   };
 
-  const handleNewChat = () => {
+  const handleNewChat = async () => {
+    // Save current chat to database
+    try {
+      await saveCacheToDb();
+    } catch (error) {
+      console.error('Error saving cache to db', error);
+    }
+
+  // Clear current messages
     setMessages([]);
+    setChatId(null);
+
+    // Fetch updated chat list
+    try {
+      const updatedChats = await fetchChats();
+      setPreviousChats(updatedChats);
+    } catch (error) {
+      console.error('Error loading updated chats', error);
+    }
+  };
+
+  const loadPreviousChat = async (id) => {
+    try {
+      const chatData = await fetchChatFromDb(id);
+      setMessages(chatData);
+      setChatId(id);
+    } catch (error) {
+      console.error('Error fetching chat from db', error);
+    }
   };
 
   return (
@@ -72,16 +94,13 @@ function App() {
         <div className="upperSide">
           <div className="upperSideTop">
             <img src={gptLogo} alt='logo' className='logo' /><span className='brand'></span>
-            <button className='midBtn' onClick={() => { window.location.reload() }}><img src={addBtn} alt='new chat' className='addBtn' />New Chat</button>
-              <button className='query' onClick={handleNewChat}>Chat 1</button>
-              <button className='query' onClick={handleNewChat}>Chat 2</button>
-              <button className='query' onClick={handleNewChat}>Chat 3</button>
+            <button className='midBtn' onClick={handleNewChat}><img src={addBtn} alt='new chat' className='addBtn' />New Chat</button>
+            {previousChats.map((chat) => (
+              <button key={chat.id} className='query' onClick={() => loadPreviousChat(chat.id)}>
+                Chat {chat.id} - {new Date(chat.created_at).toLocaleString()}
+              </button>
+            ))}
           </div>
-        </div>
-        <div className="lowerSide">
-          {/* <div className='listItems'><img src={home} alt='' className='listItemsImg' />Home</div>
-          <div className='listItems'><img src={saved} alt='' className='listItemsImg' />Saved</div>
-          <div className='listItems'><img src={rocket} alt='' className='listItemsImg' />Upgrade</div> */}
         </div>
       </div>
 
@@ -107,3 +126,5 @@ function App() {
 }
 
 export default App;
+
+

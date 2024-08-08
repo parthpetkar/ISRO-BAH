@@ -16,12 +16,13 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from chat.views import save_chat
+from chat.views import save_chat_to_cache, save_cache_to_db, fetch_chat_from_db, list_chats
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    # path('cache-test/', my_view, name='cache-test'),
-    # path('session-test/', session_test_view, name='session-test'),
-    path('save_chat/', save_chat, name='save_chat'),
+    path('save_chat_to_cache/', save_chat_to_cache, name='save_chat_to_cache'),
+    path('save_cache_to_db/', save_cache_to_db, name='save_cache_to_db'),
+    path('fetch_chat_from_db/<int:chat_id>/', fetch_chat_from_db, name='fetch_chat_from_db'),
+    path('list_chats/', list_chats, name='list_chats'),
 ]
 
