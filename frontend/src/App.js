@@ -34,25 +34,40 @@ function App() {
   const handleSend = async () => {
     const text = input;
     setInput('');
+
+    // Add user's message to the chat
     const userMessage = { text, isBot: false };
     setMessages(prevMessages => [...prevMessages, userMessage]);
 
-    // Simulate a bot response (replace with actual bot response logic)
-    const botResponse = "This is a simulated response.";
-    const newMessages = [
-      ...messages,
-      userMessage,
-      { text: botResponse, isBot: true }
-    ];
-    setMessages(newMessages);
-
-    // Save chat to cache
     try {
-      await saveChatToCache(newMessages);
+      // Save the chat to the cache and wait for the bot's response
+      const newMessages = [...messages, userMessage];
+      const response = await saveChatToCache(newMessages);
+
+      // Check if the response contains chat_data
+      if (!response || !Array.isArray(response)) {
+        throw new Error('Unexpected response format');
+      }
+
+      // Extract the bot's response from the API response
+      const botResponse = response.find(msg => msg.isBot);
+
+      if (botResponse) {
+        // Add bot's message to the chat
+        const botMessage = { text: botResponse.text, isBot: true };
+        setMessages(prevMessages => [...prevMessages, botMessage]);
+      } else {
+        console.error('No bot response found');
+      }
+
     } catch (error) {
-      console.error('Error saving chat to cache', error);
+      console.error('Error during chat processing:', error.message);
+
+      // Optionally, add an error message to the chat
+      const errorMessage = { text: "Error processing message", isBot: true };
+      setMessages(prevMessages => [...prevMessages, errorMessage]);
     }
-  };
+  }; 
 
   const handleEnter = async (e) => {
     if (e.key === 'Enter') await handleSend();
