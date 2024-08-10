@@ -17,48 +17,82 @@ body {
 .App {
   min-height: 100vh;
   display: flex;
+  overflow: hidden; /* Prevent parent overflow */
 }
 
-.sidebar {
+/* .sidebar {
   flex: 1;
   max-width: 25rem;
-  /* border-right: 1px solid rgb(100, 100, 100); */
   position: relative;
   background: url('./assets/sidebar-background.jpg') no-repeat center center;
   background-size: cover;
+  overflow-y: auto; 
+  height: 100vh; 
+} */
+.sidebar {
+  flex: 1;
+  max-width: 25rem;
+  position: relative;
+  /* background: url('./assets/sidebar-background.jpg') no-repeat center center; */
+  /* filter: blur(10px); */
+  background: rgba(28, 30, 58, 1);
+  background-size: cover;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  
 }
 
-.sidebar::before {
+.fixedContent {
+  padding: 2.5rem;
+  flex-shrink: 0; /* Prevent shrinking when the container is resized */
+}
+
+.scrollableContent {
+  flex-grow: 1; /* Allow this section to take the remaining space */
+  overflow-y: auto; /* Enable scrolling within the queries section */
+  padding: 0 2.5rem 2.5rem 2.5rem;
+}
+
+.scrollableContent::-webkit-scrollbar {
+  display: none;
+}
+
+
+/* .sidebar::before {
   content: "";
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.6); /* Adjust the transparency and darkness here */
+  background: rgba(0, 0, 0, 0.6);
   z-index: 0;
-}
+} */
 
-.upperSide, .lowerSide {
+/* .upperSide, .lowerSide {
   position: relative;
   z-index: 1;
   padding: 2.5rem;
-}
+} */
 
 .main {
   flex: 3;
   display: flex;
   flex-direction: column;
-  padding: 2rem;
   max-width: 70rem;
   margin: auto;
+  overflow: hidden; /* Prevent overflow in the main container */
+  height: 100vh; /* Ensure the main section takes up the full height of the viewport */
 }
 
 .logo {
   margin-right: 1rem;
+  /* padding-left: 50%; */
   width: 70px;
   height: 70px;
   margin-bottom: 25px;
+  margin-left: 70px;
 }
 
 .brand {
@@ -95,14 +129,15 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: transparent;
+  /* background: transparent; */
+  background: rgb(3, 0, 31);
   color: rgba(222, 222, 222, 1);
   padding: 1.5rem;
   font-size: 1.5rem;
   width: 100%;
   margin-bottom: 1rem;
   border-radius: 0.5rem;
-  border: 1px solid rgba(98, 98, 98, 1);
+  border: 0px solid rgba(98, 98, 98, 1);
 }
 
 .query > img {
@@ -129,10 +164,12 @@ body {
 
 .chats {
   flex: 1;
-  overflow-y: auto;
+  overflow-y: auto; /* Enable scrolling within the chats area */
   scroll-behavior: smooth;
-  width: 100%;
   margin-bottom: 2rem;
+  padding-top: 3rem;
+  padding-bottom: 4rem; /* Adjust padding to prevent content from hiding behind footer */
+
 }
 
 .chat {
@@ -165,21 +202,28 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
+  background: rgba(28, 30, 58, 1);
+  position: sticky; /* Ensure the footer stays at the bottom of the viewport */
+  bottom: 0;
+  z-index: 10; /* Make sure the footer stays above other elements */
+  margin-bottom: 2rem; /* Add some space between footer and bottom of the screen */
+  border-radius: 0.5rem;
 }
 
 .inp {
-  padding: 1rem;
+  padding: 0.2rem;
+  padding-right: 15px;
   background: rgba(28, 30, 58, 1);
   display: flex;
   align-items: center;
-  border-radius: 0.5rem;
-  width: 68rem;
+  border-radius: 2.5rem;
+  width: 100%;
 }
 
 .inp > input {
   flex: 1;
   outline: none;
-  padding: 1.25rem;
+  padding: 1rem;
   color: white;
   background: transparent;
   border: none;

@@ -2,8 +2,9 @@ import './App.css';
 import gptLogo from './assets/chatgpt1.png';
 import addBtn from './assets/add-30.png';
 import sendBtn from './assets/send.svg';
-import userIcon from './assets/user-icon.png';
-import gptImgLogo from './assets/chatgptLogo.svg';
+// import userIcon from './assets/user-icon.png';
+import userIcon from './assets/my-face.jpg'
+import gptImgLogo from './assets/chat_bot_icon.jpeg';
 import { useEffect, useRef, useState } from 'react';
 import { saveChatToCache, saveCacheToDb, fetchChatFromDb, fetchChats } from './services/api';
 
@@ -95,22 +96,25 @@ function App() {
 
   return (
     <div className="App">
+      
+
       <div className="sidebar">
-        <div className="upperSide">
-          <div className="upperSideTop">
-            <img src={gptLogo} alt='logo' className='logo' /><span className='brand'></span>
-            <button className='midBtn' onClick={handleNewChat}><img src={addBtn} alt='new chat' className='addBtn' />New Chat</button>
-            {previousChats.map((chat) => (
-              <button key={chat.id} className='query' onClick={() => loadPreviousChat(chat.id)}>
-                Chat {chat.id} - {new Date(chat.created_at).toLocaleString()}
-              </button>
-            ))}
-          </div>
+        <div className="fixedContent">
+          <img src={gptLogo} alt='logo' className='logo' /><span className='brand'></span>
+          <button className='midBtn' onClick={handleNewChat}><img src={addBtn} alt='new chat' className='addBtn' />New Chat</button>
+        </div>
+        <div className="scrollableContent">
+          {previousChats.map((chat) => (
+            <button key={chat.id} className='query' onClick={() => loadPreviousChat(chat.id)}>
+              Chat {chat.id} - {new Date(chat.created_at).toLocaleString()}
+            </button>
+          ))}
         </div>
       </div>
 
+
       <div className='main'>
-        <div className='chats'>
+        <div className='chats scrollableContent'>
           {messages.map((message, i) =>
             <div key={i} className={message.isBot ? 'chat bot' : 'chat'}>
               <img className='chatImg' src={message.isBot ? gptImgLogo : userIcon} alt='' /><p className='txt'>{message.text}</p>
@@ -123,7 +127,7 @@ function App() {
           <div className='inp'>
             <input type='text' placeholder='Send a message' value={input} onKeyDown={handleEnter} onChange={(e) => { setInput(e.target.value) }} /> <button className='send' onClick={handleSend}><img src={sendBtn} alt='send' /></button>
           </div>
-          <p>Chat may produce incorrect results</p>
+          {/* <p>Chat may produce incorrect results</p> */}
         </div>
       </div>
     </div>
