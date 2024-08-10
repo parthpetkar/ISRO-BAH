@@ -11,7 +11,7 @@ function App() {
   const msgEnd = useRef(null);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState([]);
-  const [, setChatId] = useState(null);
+  const [chatId, setChatId] = useState(null);
   const [previousChats, setPreviousChats] = useState([]);
 
   useEffect(() => {
@@ -58,14 +58,18 @@ function App() {
   };
 
   const handleNewChat = async () => {
-    // Save current chat to database
     try {
-      await saveCacheToDb();
+      if (messages.length > 0) {
+        const response = await saveCacheToDb(chatId);  // Pass chatId correctly
+        if (response.chat_id) {
+          setChatId(response.chat_id);  // Update chatId if a new one is created
+        }
+      }
     } catch (error) {
       console.error('Error saving cache to db', error);
     }
 
-  // Clear current messages
+    // Clear current messages
     setMessages([]);
     setChatId(null);
 
@@ -77,6 +81,7 @@ function App() {
       console.error('Error loading updated chats', error);
     }
   };
+
 
   const loadPreviousChat = async (id) => {
     try {
@@ -126,5 +131,3 @@ function App() {
 }
 
 export default App;
-
-

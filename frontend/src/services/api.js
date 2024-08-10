@@ -12,16 +12,6 @@ export const createChat = async (messages) => {
     }
 };
 
-export const addMessageToChat = async (chatId, messages) => {
-    try {
-        const response = await axios.put(`${API_URL}update_chat/${chatId}/`, { input_response_pairs: messages });
-        return response.data;
-    } catch (error) {
-        console.error('Error updating chat', error);
-        throw error;
-    }
-};
-
 export const saveChatToCache = async (messages) => {
     try {
         const response = await axios.post(`${API_URL}save_chat_to_cache/`, { chat_data: messages });
@@ -32,15 +22,16 @@ export const saveChatToCache = async (messages) => {
     }
 };
 
-export const saveCacheToDb = async () => {
+export const saveCacheToDb = async (chatId) => {
     try {
-        const response = await axios.post(`${API_URL}save_cache_to_db/`);
+        const response = await axios.post(`${API_URL}save_cache_to_db/`, { chat_id: chatId });
         return response.data;
     } catch (error) {
         console.error('Error saving cache to db', error);
         throw error;
     }
 };
+
 
 export const fetchChatFromDb = async (chatId) => {
     try {
