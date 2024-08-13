@@ -2,3 +2,5 @@ django
 djangorestframework
 django-redis
 django-cors-headers
+sentence-transformers==3.0.1
+torch==2.3.1
