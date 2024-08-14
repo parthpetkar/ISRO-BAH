@@ -232,6 +232,12 @@ body {
   text-align: center;
 }
 
+.inp select option {
+  background: rgba(28, 30, 58, 1);
+  color: #E1E5F2;
+  padding: 1rem;
+}
+
 .inp > input {
   flex-grow: 1;
   outline: none;
