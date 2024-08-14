@@ -61,9 +61,19 @@ function App() {
     try {
       const response = await saveChatToCache([userMessage], option);
 
+      console.log('API Response:', response); // Log the full response
+
+      // if (!response.data) {
+      //   throw new Error('Response data is undefined');
+      // }
+
       if (option === 'mapping') {
-        const chatData = response.data.response_data.generation_data;
-        let botResponse = chatData.answer;
+        const generationData = response.data.response_data?.generation_data;
+        if (!generationData) {
+          throw new Error('No generation data found in response');
+        }
+
+        let botResponse = generationData.answer;
 
         // Remove everything after "SQL_query"
         const sqlQueryIndex = botResponse.indexOf('SQL_query:');
@@ -71,50 +81,41 @@ function App() {
           botResponse = botResponse.substring(0, sqlQueryIndex).trim();
         }
 
-        // Add the bot's response to the messages
-        const botMessage = {
-          text: botResponse,
-          isBot: true,
-          option
-        };
+        const botMessage = { text: botResponse, isBot: true, option };
         setMessages(prevMessages => [...prevMessages, botMessage]);
         setPreviousResponses(prevResponses => [...prevResponses, botMessage]);
 
-        const mappingData = JSON.parse(response.data.response_data.mapping_data);
-        if (!mappingData || !Array.isArray(mappingData)) {
+        const mappingData = JSON.parse(response.data.response_data?.mapping_data || '[]');
+        if (!Array.isArray(mappingData)) {
           throw new Error('Unexpected mapping data format');
         }
         setMappingData(mappingData);
       } else {
-        if (!response.data.chat_data || !Array.isArray(response.data.chat_data)) {
-          throw new Error('Unexpected API response format');
-        }
-
-        const chatData = response.data.chat_data;
-        const similarQ = response.data.similar_question || "";
+        const chatData = response.chat_data;
+        const similarQ = response.similar_question || "";
         setSimilarQuestion(similarQ);
 
-        const botResponses = chatData.filter(msg => msg.isBot);
-        if (botResponses.length > 0) {
-          const botMessages = botResponses.map(botResponse => {
-            let text = botResponse.text;
-
-            // Remove everything after "SQL_query"
-            const sqlQueryIndex = text.indexOf('SQL_query:');
-            if (sqlQueryIndex !== -1) {
-              text = text.substring(0, sqlQueryIndex).trim();
-            }
-
-            return { text, isBot: true, option };
-          });
-          setMessages(prevMessages => [...prevMessages, ...botMessages]);
-          setPreviousResponses(prevResponses => [...prevResponses, ...botMessages]);
-        } else {
-          console.error('No bot response found');
+        if (!chatData || !Array.isArray(chatData)) {
+          throw new Error('chat_data is missing or not an array');
         }
+
+        const botMessages = chatData.map(msg => {
+          let text = msg.text;
+
+          // Remove everything after "SQL_query"
+          const sqlQueryIndex = text.indexOf('SQL_query:');
+          if (sqlQueryIndex !== -1) {
+            text = text.substring(0, sqlQueryIndex).trim();
+          }
+
+          return { text, isBot: msg.isBot, option };
+        });
+
+        setMessages(prevMessages => [...prevMessages, ...botMessages]);
+        setPreviousResponses(prevResponses => [...prevResponses, ...botMessages]);
       }
     } catch (error) {
-      console.error('Error during chat processing:', error.message);
+      console.error('Error during chat processing:', error.message, error);
 
       const errorMessage = { text: "Error processing message", isBot: true, option };
       setMessages(prevMessages => [...prevMessages, errorMessage]);
@@ -122,7 +123,7 @@ function App() {
 
       clearSimilarQuestion();
     }
-  };  
+  };
 
   const handleEnter = async (e) => {
     if (e.key === 'Enter') await handleSend();
