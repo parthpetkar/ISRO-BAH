@@ -26,7 +26,7 @@ export const saveChatToCache = async (chatData, option) => {
 
         // If the option is "mapping", handle mapping-specific response
         if (option === "mapping") {
-            console.log(response.data.response_data)
+            console.log(response)
             return response;  // Adjust based on actual response structure
         }
 

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import './App.css';
 import gptLogo from './assets/chatgpt1.png';
-import addBtn from './assets/add-30.png';
+// import addBtn from './assets/add-30.png';
 import sendBtn from './assets/send.svg';
 import userIcon from './assets/my-face.jpg';
 import gptImgLogo from './assets/chat_bot_icon.jpeg';
@@ -62,7 +62,25 @@ function App() {
       const response = await saveChatToCache([userMessage], option);
 
       if (option === 'mapping') {
-        const mappingData = response.data.response_data;
+        const chatData = response.data.response_data.generation_data;
+        let botResponse = chatData.answer;
+
+        // Remove everything after "SQL_query"
+        const sqlQueryIndex = botResponse.indexOf('SQL_query:');
+        if (sqlQueryIndex !== -1) {
+          botResponse = botResponse.substring(0, sqlQueryIndex).trim();
+        }
+
+        // Add the bot's response to the messages
+        const botMessage = {
+          text: botResponse,
+          isBot: true,
+          option
+        };
+        setMessages(prevMessages => [...prevMessages, botMessage]);
+        setPreviousResponses(prevResponses => [...prevResponses, botMessage]);
+
+        const mappingData = JSON.parse(response.data.response_data.mapping_data);
         if (!mappingData || !Array.isArray(mappingData)) {
           throw new Error('Unexpected mapping data format');
         }
@@ -78,11 +96,17 @@ function App() {
 
         const botResponses = chatData.filter(msg => msg.isBot);
         if (botResponses.length > 0) {
-          const botMessages = botResponses.map(botResponse => ({
-            text: botResponse.text,
-            isBot: true,
-            option
-          }));
+          const botMessages = botResponses.map(botResponse => {
+            let text = botResponse.text;
+
+            // Remove everything after "SQL_query"
+            const sqlQueryIndex = text.indexOf('SQL_query:');
+            if (sqlQueryIndex !== -1) {
+              text = text.substring(0, sqlQueryIndex).trim();
+            }
+
+            return { text, isBot: true, option };
+          });
           setMessages(prevMessages => [...prevMessages, ...botMessages]);
           setPreviousResponses(prevResponses => [...prevResponses, ...botMessages]);
         } else {
@@ -98,7 +122,7 @@ function App() {
 
       clearSimilarQuestion();
     }
-  };
+  };  
 
   const handleEnter = async (e) => {
     if (e.key === 'Enter') await handleSend();
@@ -139,6 +163,7 @@ function App() {
   };
 
   // Function to plot the map using Leaflet.js
+  // Function to plot the map using Leaflet.js
   const plotMap = (mappingData) => {
     if (mapContainer.current) {
       // Clear any existing map
@@ -148,14 +173,29 @@ function App() {
       }
 
       // Create a new map instance
-      const map = L.map(mapContainer.current).setView([51.505, -0.09], 13); // Centering on a default location
+      const map = L.map(mapContainer.current).setView([51.505, -0.09], 13); // Default view
 
       // Add a tile layer
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
       }).addTo(map);
 
-      // Add polygons to the map
+      // Choose a random coordinate from the mapping data to set as the center
+      let randomCenter = [51.505, -0.09]; // Default center if mappingData is empty
+
+      if (mappingData.length > 0) {
+        const randomIndex = Math.floor(Math.random() * mappingData.length);
+        const randomCoordinates = mappingData[randomIndex].coordinates;
+
+        if (randomCoordinates && randomCoordinates.length > 0) {
+          randomCenter = [randomCoordinates[0][1], randomCoordinates[0][0]]; // Assuming the first pair of coordinates
+        }
+      }
+
+      // Set the view of the map to the random center
+      map.setView(randomCenter, 13);
+
+      // Add polygons to the map with enhanced styling
       mappingData.forEach((item, index) => {
         try {
           if (item.coordinates && Array.isArray(item.coordinates)) {
@@ -171,7 +211,13 @@ function App() {
 
             // Check if there are valid coordinates to create a polygon
             if (latLngs.length > 0) {
-              L.polygon(latLngs, { color: 'blue', fillColor: 'blue', fillOpacity: 0.5 }).addTo(map);
+              L.polygon(latLngs, {
+                color: '#3388ff', // Border color
+                weight: 4, // Border width
+                opacity: 0.8, // Border opacity
+                fillColor: '#3388ff', // Fill color
+                fillOpacity: 0.4 // Fill opacity
+              }).addTo(map);
             } else {
               console.error(`No valid coordinates found for polygon at index ${index}`);
             }
@@ -186,6 +232,7 @@ function App() {
       console.error('Map container not found');
     }
   };
+
 
   // Button hover effect
   const [hovered, setHovered] = useState(false);
@@ -208,10 +255,10 @@ function App() {
   });
 
   // Input focus effect
-  const inputFocusAnimation = useSpring({
-    borderColor: input ? 'rgba(16, 185, 129, 0.7)' : 'rgba(209, 213, 219, 1)',
-    config: { tension: 300, friction: 10 },
-  });
+  // const inputFocusAnimation = useSpring({
+  //   borderColor: input ? 'rgba(16, 185, 129, 0.7)' : 'rgba(209, 213, 219, 1)',
+  //   config: { tension: 300, friction: 10 },
+  // });
 
   return (
     <div className="App">
@@ -253,6 +300,14 @@ function App() {
           )}
           <div ref={msgEnd}></div>
         </div>
+        {/* Map Container */}
+        {option === 'mapping' && (
+          <div
+            className="mapContainer"
+            ref={mapContainer}
+            style={{ height: '500px', width: '100%' }}
+          ></div>
+        )}
 
         <div className='chatFooter'>
           {similarQuestion && (
@@ -278,14 +333,6 @@ function App() {
           </div>
         </div>
 
-        {/* Map Container */}
-        {option === 'mapping' && (
-          <div
-            className="mapContainer"
-            ref={mapContainer}
-            style={{ height: '500px', width: '100%' }}
-          ></div>
-        )}
       </div>
     </div>
   );
