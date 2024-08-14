@@ -5,6 +5,7 @@ import addBtn from './assets/add-30.png';
 import sendBtn from './assets/send.svg';
 import userIcon from './assets/my-face.jpg';
 import gptImgLogo from './assets/chat_bot_icon.jpeg';
+import { useSpring, useTrail, animated, config } from '@react-spring/web';
 import { saveChatToCache, saveCacheToDb, fetchChatFromDb, fetchChats } from './services/api';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -22,7 +23,9 @@ function App() {
   const [mappingData, setMappingData] = useState(null);
 
   useEffect(() => {
-    msgEnd.current.scrollIntoView();
+    if (msgEnd.current) {
+      msgEnd.current.scrollIntoView();
+    }
   }, [messages]);
 
   useEffect(() => {
@@ -58,18 +61,12 @@ function App() {
     try {
       const response = await saveChatToCache([userMessage], option);
 
-      console.log('API Response:', response);
-
       if (option === 'mapping') {
         const mappingData = response.data.response_data;
-        console.log(mappingData);
-
         if (!mappingData || !Array.isArray(mappingData)) {
           throw new Error('Unexpected mapping data format');
         }
-
         setMappingData(mappingData);
-
       } else {
         if (!response.data.chat_data || !Array.isArray(response.data.chat_data)) {
           throw new Error('Unexpected API response format');
@@ -77,7 +74,6 @@ function App() {
 
         const chatData = response.data.chat_data;
         const similarQ = response.data.similar_question || "";
-
         setSimilarQuestion(similarQ);
 
         const botResponses = chatData.filter(msg => msg.isBot);
@@ -143,7 +139,6 @@ function App() {
   };
 
   // Function to plot the map using Leaflet.js
-  // Function to plot the map using Leaflet.js
   const plotMap = (mappingData) => {
     if (mapContainer.current) {
       // Clear any existing map
@@ -192,31 +187,69 @@ function App() {
     }
   };
 
+  // Button hover effect
+  const [hovered, setHovered] = useState(false);
+  const buttonAnimation = useSpring({
+    scale: hovered ? 1.05 : 1,
+    config: { tension: 300, friction: 10 },
+  });
 
+  // Chat message animation with trail
+  const trail = useTrail(previousResponses.length, {
+    from: { opacity: 0, transform: 'translate3d(0, 20px, 0)' },
+    to: { opacity: 1, transform: 'translate3d(0, 0px, 0)' },
+    config: config.gentle,
+  });
+
+  // Sidebar slide-in effect
+  const sidebarAnimation = useSpring({
+    from: { opacity: 0, transform: 'translate3d(-30px, 0, 0)' },
+    to: { opacity: 1, transform: 'translate3d(0, 0, 0)' },
+  });
+
+  // Input focus effect
+  const inputFocusAnimation = useSpring({
+    borderColor: input ? 'rgba(16, 185, 129, 0.7)' : 'rgba(209, 213, 219, 1)',
+    config: { tension: 300, friction: 10 },
+  });
 
   return (
     <div className="App">
-      <div className="sidebar">
+      <animated.div className="sidebar" style={sidebarAnimation}>
         <div className="fixedContent">
-          <img src={gptLogo} alt='logo' className='logo' /><span className='brand'></span>
-          <button className='midBtn' onClick={handleNewChat}><img src={addBtn} alt='new chat' className='addBtn' />New Chat</button>
+          <img src={gptLogo} alt='logo' className='logo' />
+          <span className='brand'></span>
+          <animated.button
+            style={buttonAnimation}
+            className='midBtn'
+            onClick={handleNewChat}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+          >
+            New Chat
+          </animated.button>
         </div>
         <div className="scrollableContent">
           {previousChats.map((chat) => (
-            <button key={chat.id} className='query' onClick={() => loadPreviousChat(chat.id)}>
+            <animated.button
+              key={chat.id}
+              style={sidebarAnimation}
+              className='query'
+              onClick={() => loadPreviousChat(chat.id)}
+            >
               Chat {chat.id} - {new Date(chat.created_at).toLocaleString()}
-            </button>
+            </animated.button>
           ))}
         </div>
-      </div>
+      </animated.div>
 
       <div className='main'>
         <div className='chats scrollableContent'>
-          {previousResponses.map((message, i) =>
-            <div key={i} className={message.isBot ? 'chat bot' : 'chat'}>
-              <img className='chatImg' src={message.isBot ? gptImgLogo : userIcon} alt='' />
-              <p className='txt'>{message.text}</p>
-            </div>
+          {trail.map((props, i) =>
+            <animated.div key={i} style={props} className={previousResponses[i].isBot ? 'chat bot' : 'chat user'}>
+              <img className='chatImg' src={previousResponses[i].isBot ? gptImgLogo : userIcon} alt='' />
+              <p className='txt'>{previousResponses[i].text}</p>
+            </animated.div>
           )}
           <div ref={msgEnd}></div>
         </div>

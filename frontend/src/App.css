@@ -1,3 +1,4 @@
+/* Global Styles */
 * {
   margin: 0;
   padding: 0;
@@ -14,43 +15,32 @@ body {
   font-family: 'Poppins', sans-serif;
 }
 
+/* Layout Styles */
 .App {
   min-height: 100vh;
   display: flex;
-  overflow: hidden; /* Prevent parent overflow */
+  overflow: hidden;
 }
 
-/* .sidebar {
-  flex: 1;
-  max-width: 25rem;
-  position: relative;
-  background: url('./assets/sidebar-background.jpg') no-repeat center center;
-  background-size: cover;
-  overflow-y: auto; 
-  height: 100vh; 
-} */
 .sidebar {
   flex: 1;
   max-width: 25rem;
   position: relative;
-  /* background: url('./assets/sidebar-background.jpg') no-repeat center center; */
-  /* filter: blur(10px); */
   background: rgba(28, 30, 58, 1);
   background-size: cover;
   height: 100vh;
   display: flex;
   flex-direction: column;
-  
 }
 
 .fixedContent {
   padding: 2.5rem;
-  flex-shrink: 0; /* Prevent shrinking when the container is resized */
+  flex-shrink: 0;
 }
 
 .scrollableContent {
-  flex-grow: 1; /* Allow this section to take the remaining space */
-  overflow-y: auto; /* Enable scrolling within the queries section */
+  flex-grow: 1;
+  overflow-y: auto;
   padding: 0 2.5rem 2.5rem 2.5rem;
 }
 
@@ -58,41 +48,21 @@ body {
   display: none;
 }
 
-
-/* .sidebar::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.6);
-  z-index: 0;
-} */
-
-/* .upperSide, .lowerSide {
-  position: relative;
-  z-index: 1;
-  padding: 2.5rem;
-} */
-
 .main {
   flex: 3;
   display: flex;
   flex-direction: column;
   max-width: 70rem;
   margin: auto;
-  overflow: hidden; /* Prevent overflow in the main container */
-  height: 100vh; /* Ensure the main section takes up the full height of the viewport */
+  overflow: hidden;
+  height: 100vh;
 }
 
+/* Sidebar Content */
 .logo {
-  margin-right: 1rem;
-  /* padding-left: 50%; */
   width: 70px;
   height: 70px;
-  margin-bottom: 25px;
-  margin-left: 70px;
+  margin: 0 0 25px 70px;
 }
 
 .brand {
@@ -116,7 +86,7 @@ body {
   border: none;
   color: white;
   padding: 1.5rem;
-  font-size: 1.5rem;
+  font-size: 1.3rem;
   width: 100%;
   display: flex;
   align-items: center;
@@ -129,7 +99,6 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  /* background: transparent; */
   background: rgb(3, 0, 31);
   color: rgba(222, 222, 222, 1);
   padding: 1.5rem;
@@ -162,14 +131,14 @@ body {
   width: 1.75rem;
 }
 
+/* Chats Area */
 .chats {
   flex: 1;
-  overflow-y: auto; /* Enable scrolling within the chats area */
+  overflow-x: hidden;
+  overflow-y: auto;
   scroll-behavior: smooth;
   margin-bottom: 2rem;
-  padding-top: 3rem;
-  padding-bottom: 4rem; /* Adjust padding to prevent content from hiding behind footer */
-
+  padding: 3rem 0 4rem 0;
 }
 
 .chat {
@@ -196,6 +165,13 @@ body {
   border-radius: 0.5rem;
 }
 
+.user {
+  background: rgba(28, 30, 58, 1);
+  width: fit-content;
+  border-radius: 0.5rem;
+}
+
+/* Chat Footer */
 .chatFooter {
   padding: 1rem 0;
   width: 100%;
@@ -203,11 +179,11 @@ body {
   flex-direction: column;
   align-items: center;
   background: rgba(28, 30, 58, 1);
-  position: sticky; /* Ensure the footer stays at the bottom of the viewport */
+  position: sticky;
   bottom: 0;
-  z-index: 10; /* Make sure the footer stays above other elements */
-  margin-bottom: 2rem; /* Add some space between footer and bottom of the screen */
-  border-radius: 0.5rem;
+  z-index: 10;
+  margin-bottom: 2rem;
+  border-radius: 2rem;
 }
 
 .inp {
@@ -216,17 +192,43 @@ body {
   background: rgba(28, 30, 58, 1);
   display: flex;
   align-items: center;
-  border-radius: 2.5rem;
+  border-radius: 2rem;
   width: 100%;
 }
 
+.inp > select {
+  background-color: #5A4BFF;
+  border: none;
+  color: white;
+  padding: 1.5rem;
+  font-size: 1.3rem;
+  border-radius: 2rem;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  white-space: nowrap;
+  margin-right: 10px;
+  flex-shrink: 0;
+  margin-left: 13px;
+  text-align: center;
+}
+
 .inp > input {
-  flex: 1;
+  flex-grow: 1;
   outline: none;
   padding: 1rem;
   color: white;
   background: transparent;
   border: none;
+  min-width: 0;
+}
+
+.inp > button {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin-left: 10px;
+  border-radius: 2rem;
 }
 
 .send {
@@ -238,9 +240,10 @@ body {
   margin: 1rem 0 0 0;
 }
 
+/* Text and Buttons */
 .txt {
   line-height: 2.4rem;
-  font-size: 120%;
+  font-size: 1.2rem;
   color: rgba(222, 222, 222, 1);
 }
 
