@@ -10,9 +10,11 @@ html {
 }
 
 body {
-  background: rgb(3, 0, 31);
-  color: white;
+  background: url('/src/assets/pexel.jpg') no-repeat center center fixed;
+  background-size: cover;
+  color: #FFFFFF;
   font-family: 'Poppins', sans-serif;
+  overflow-x: hidden;
 }
 
 /* Layout Styles */
@@ -58,11 +60,22 @@ body {
   height: 100vh;
 }
 
+.main .chats {
+  flex: 1 1;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  padding: 2rem;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 1rem;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3);
+}
+
 /* Sidebar Content */
 .logo {
   width: 70px;
   height: 70px;
   margin: 0 0 25px 70px;
+  animation: bounce 1s infinite alternate;
 }
 
 .brand {
@@ -82,7 +95,7 @@ body {
 }
 
 .midBtn {
-  background: #5A4BFF;
+  background: linear-gradient(135deg, #5A4BFF, #928DAB);;
   border: none;
   color: white;
   padding: 1.5rem;
@@ -93,6 +106,7 @@ body {
   justify-content: center;
   margin-bottom: 3rem;
   border-radius: 0.5rem;
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
 }
 
 .query {
@@ -196,10 +210,15 @@ body {
   width: 100%;
 }
 
+.inp select:hover {
+  background: rgba(90, 75, 255, 0.2);
+  box-shadow: 0 0 5px rgba(90, 75, 255, 0.5);
+}
+
 .inp > select {
-  background-color: #5A4BFF;
+  background: rgba(90, 75, 255, 0.1);
   border: none;
-  color: white;
+  color: #E1E5F2;
   padding: 1.5rem;
   font-size: 1.3rem;
   border-radius: 2rem;
