@@ -1,4 +1,4 @@
-import uuid  # Import this at the top of your views.py
+import uuid
 import requests
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -11,6 +11,9 @@ from sentence_transformers import SentenceTransformer, util
 # Use the default cache
 default_cache = caches['default']
 question_cache = caches['question']
+
+# Initialize SentenceTransformer model
+model = SentenceTransformer('all-MiniLM-L6-v2')
 
 @api_view(['GET'])
 def list_chats(request):
@@ -26,9 +29,6 @@ def save_chat(request):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-# Initialize SentenceTransformer model
-model = SentenceTransformer('all-MiniLM-L6-v2')
-
 @api_view(['POST'])
 def save_chat_to_cache(request):
     chat_data = request.data.get('chat_data')
@@ -42,6 +42,15 @@ def save_chat_to_cache(request):
         message['id'] = str(uuid.uuid4())
 
     user_input = chat_data[-1].get('text')
+    if option == 'mapping':
+        api_url = "http://127.0.0.1:5000/api/query"
+        try:
+            response = requests.post(api_url, json={"query": user_input, "mode": option})
+            response.raise_for_status()
+            response_data = response.json()
+            return Response({"status": "Chat saved to cache", "response_data": response_data}, status=status.HTTP_200_OK)
+        except requests.exceptions.RequestException as e:
+            return Response({"status": f"External API request error: {str(e)}"}, status=status.HTTP_502_BAD_GATEWAY)
 
     try:
         # Retrieve cached questions from the cache
@@ -64,41 +73,51 @@ def save_chat_to_cache(request):
         if matched_question_data:
             # Retrieve response from the cache
             print(matched_question_data)
-            ques_response_data = matched_question_data
-            bot_response = ques_response_data.get('answer', 'No response from cached data')
-            similar_question = ques_response_data.get('highest_similar_question', '')
+            bot_response = matched_question_data.get('answer', 'No response from cached data')
+            similar_question = matched_question_data.get('highest_similar_question', '')
         else:
             # Process query and get response from external APIs
             query_optimization_url = "http://127.0.0.1:5050/process_query"
-            response = requests.post(query_optimization_url, json={"query": user_input})
-            response.raise_for_status()
-            query_response_data = response.json()
-            optimized_query = query_response_data.get('optimized_query', user_input)
+            try:
+                response = requests.post(query_optimization_url, json={"query": user_input})
+                response.raise_for_status()
+                query_response_data = response.json()
+                optimized_query = query_response_data.get('optimized_query', user_input)
+            except requests.exceptions.RequestException as e:
+                return Response({"status": f"Query optimization API request error: {str(e)}"}, status=status.HTTP_502_BAD_GATEWAY)
 
             external_api_url = "http://127.0.0.1:5000/api/query"
-            response = requests.post(external_api_url, json={"query": optimized_query, "mode": option})
-            response.raise_for_status()
-            response_data = response.json()
-            bot_response = response_data.get('answer', 'No response from second API')
+            try:
+                response = requests.post(external_api_url, json={"query": optimized_query, "mode": option})
+                response.raise_for_status()
+                response_data = response.json()
+                bot_response = response_data.get('answer', 'No response from second API')
+            except requests.exceptions.RequestException as e:
+                return Response({"status": f"External API request error: {str(e)}"}, status=status.HTTP_502_BAD_GATEWAY)
 
             send_data_api_url = "http://127.0.0.1:5060/ask"
-            send_data_response = requests.post(send_data_api_url, json={"chat_data": optimized_query})
-            send_data_response.raise_for_status()
-            api_response_data = send_data_response.json()
+            try:
+                send_data_response = requests.post(send_data_api_url, json={"chat_data": optimized_query})
+                send_data_response.raise_for_status()
+                api_response_data = send_data_response.json()
+            except requests.exceptions.RequestException as e:
+                return Response({"status": f"Send data API request error: {str(e)}"}, status=status.HTTP_502_BAD_GATEWAY)
 
             # Send each question in top_3_questions to external_api_url and save responses
             top_3_questions = api_response_data.get('top_3_questions', [])
             for question in top_3_questions:
                 if question:
-                    # question_vector = model.encode(question, convert_to_tensor=True)
-                    response = requests.post(external_api_url, json={"query": question, "mode": "generation"})
-                    response.raise_for_status()
-                    question_response_data = response.json()
-                    # Save each question and its response
-                    cached_questions.append({
-                        'question': question,
-                        'data': question_response_data
-                    })
+                    try:
+                        response = requests.post(external_api_url, json={"query": question, "mode": "generation"})
+                        response.raise_for_status()
+                        question_response_data = response.json()
+                        # Save each question and its response
+                        cached_questions.append({
+                            'question': question,
+                            'data': question_response_data
+                        })
+                    except requests.exceptions.RequestException as e:
+                        return Response({"status": f"Question API request error: {str(e)}"}, status=status.HTTP_502_BAD_GATEWAY)
 
             # Cache the new response with all questions and their responses
             question_cache.set('cached_questions', cached_questions)
@@ -116,8 +135,8 @@ def save_chat_to_cache(request):
             "isBot": True
         })
 
-    except requests.exceptions.RequestException as e:
-        return Response({"status": f"External API request error: {str(e)}"}, status=status.HTTP_502_BAD_GATEWAY)
+    except Exception as e:
+        return Response({"status": f"Unexpected error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     # Save the last response to cache
     last_response = chat_data[-1]  # Assuming the last response is the bot's message

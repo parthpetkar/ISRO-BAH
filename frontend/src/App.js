@@ -1,21 +1,25 @@
+import React, { useEffect, useRef, useState } from 'react';
 import './App.css';
 import gptLogo from './assets/chatgpt1.png';
 import addBtn from './assets/add-30.png';
 import sendBtn from './assets/send.svg';
 import userIcon from './assets/my-face.jpg';
 import gptImgLogo from './assets/chat_bot_icon.jpeg';
-import { useEffect, useRef, useState } from 'react';
 import { saveChatToCache, saveCacheToDb, fetchChatFromDb, fetchChats } from './services/api';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
 function App() {
   const msgEnd = useRef(null);
+  const mapContainer = useRef(null);
   const [input, setInput] = useState("");
-  const [option, setOption] = useState("Generation");
+  const [option, setOption] = useState("generation");
   const [messages, setMessages] = useState([]);
   const [chatId, setChatId] = useState(null);
   const [previousChats, setPreviousChats] = useState([]);
   const [similarQuestion, setSimilarQuestion] = useState("");
   const [previousResponses, setPreviousResponses] = useState([]);
+  const [mappingData, setMappingData] = useState(null);
 
   useEffect(() => {
     msgEnd.current.scrollIntoView();
@@ -33,6 +37,12 @@ function App() {
     loadChats();
   }, []);
 
+  useEffect(() => {
+    if (mappingData && mapContainer.current) {
+      plotMap(mappingData);
+    }
+  }, [mappingData]);
+
   const clearSimilarQuestion = () => {
     setSimilarQuestion("");
   };
@@ -46,30 +56,42 @@ function App() {
     setPreviousResponses(prevResponses => [...prevResponses, userMessage]);
 
     try {
-      const response = await saveChatToCache([userMessage]);
+      const response = await saveChatToCache([userMessage], option);
 
-      if (!response || !response.chat_data || !Array.isArray(response.chat_data)) {
-        throw new Error('Unexpected API response format');
-      }
+      console.log('API Response:', response);
 
-      const chatData = response.chat_data;
-      const similarQ = response.similar_question || "";
+      if (option === 'mapping') {
+        const mappingData = response.data.response_data;
+        console.log(mappingData);
 
-      setSimilarQuestion(similarQ);
+        if (!mappingData || !Array.isArray(mappingData)) {
+          throw new Error('Unexpected mapping data format');
+        }
 
-      const botResponses = chatData.filter(msg => msg.isBot);
-      if (botResponses.length > 0) {
-        const botMessages = botResponses.map(botResponse => ({
-          text: botResponse.text,
-          isBot: true,
-          option
-        }));
-        setMessages(prevMessages => [...prevMessages, ...botMessages]);
-        setPreviousResponses(prevResponses => [...prevResponses, ...botMessages]);
+        setMappingData(mappingData);
 
-      // clearSimilarQuestion();
       } else {
-        console.error('No bot response found');
+        if (!response.data.chat_data || !Array.isArray(response.data.chat_data)) {
+          throw new Error('Unexpected API response format');
+        }
+
+        const chatData = response.data.chat_data;
+        const similarQ = response.data.similar_question || "";
+
+        setSimilarQuestion(similarQ);
+
+        const botResponses = chatData.filter(msg => msg.isBot);
+        if (botResponses.length > 0) {
+          const botMessages = botResponses.map(botResponse => ({
+            text: botResponse.text,
+            isBot: true,
+            option
+          }));
+          setMessages(prevMessages => [...prevMessages, ...botMessages]);
+          setPreviousResponses(prevResponses => [...prevResponses, ...botMessages]);
+        } else {
+          console.error('No bot response found');
+        }
       }
     } catch (error) {
       console.error('Error during chat processing:', error.message);
@@ -120,6 +142,58 @@ function App() {
     }
   };
 
+  // Function to plot the map using Leaflet.js
+  // Function to plot the map using Leaflet.js
+  const plotMap = (mappingData) => {
+    if (mapContainer.current) {
+      // Clear any existing map
+      if (mapContainer.current._leaflet_id) {
+        mapContainer.current._leaflet_id = null;
+        mapContainer.current.innerHTML = '';
+      }
+
+      // Create a new map instance
+      const map = L.map(mapContainer.current).setView([51.505, -0.09], 13); // Centering on a default location
+
+      // Add a tile layer
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+      }).addTo(map);
+
+      // Add polygons to the map
+      mappingData.forEach((item, index) => {
+        try {
+          if (item.coordinates && Array.isArray(item.coordinates)) {
+            // Extract coordinates for the polygon
+            const latLngs = item.coordinates.map(coordPair => {
+              if (Array.isArray(coordPair) && coordPair.length === 2) {
+                return [coordPair[1], coordPair[0]]; // Convert to [lat, lng]
+              } else {
+                console.error(`Invalid coordinate format at index ${index}: ${coordPair}`);
+                return null; // Return null for invalid coordinates
+              }
+            }).filter(coord => coord !== null); // Filter out any null coordinates
+
+            // Check if there are valid coordinates to create a polygon
+            if (latLngs.length > 0) {
+              L.polygon(latLngs, { color: 'blue', fillColor: 'blue', fillOpacity: 0.5 }).addTo(map);
+            } else {
+              console.error(`No valid coordinates found for polygon at index ${index}`);
+            }
+          } else {
+            console.error(`Missing or invalid coordinates at index ${index}:`, item);
+          }
+        } catch (error) {
+          console.error(`Error processing item at index ${index}:`, error);
+        }
+      });
+    } else {
+      console.error('Map container not found');
+    }
+  };
+
+
+
   return (
     <div className="App">
       <div className="sidebar">
@@ -140,7 +214,8 @@ function App() {
         <div className='chats scrollableContent'>
           {previousResponses.map((message, i) =>
             <div key={i} className={message.isBot ? 'chat bot' : 'chat'}>
-              <img className='chatImg' src={message.isBot ? gptImgLogo : userIcon} alt='' /><p className='txt'>{message.text}</p>
+              <img className='chatImg' src={message.isBot ? gptImgLogo : userIcon} alt='' />
+              <p className='txt'>{message.text}</p>
             </div>
           )}
           <div ref={msgEnd}></div>
@@ -154,14 +229,30 @@ function App() {
           )}
           <div className='inp'>
             <select value={option} onChange={(e) => setOption(e.target.value)}>
-              <option value="Generation">Generation</option>
-              <option value="Retrieval">Retrieval</option>
-              <option value="Comparative">Comparative</option>
+              <option value="generation">Generation</option>
+              <option value="retrieval">Retrieval</option>
+              <option value="comparative">Comparative</option>
+              <option value="mapping">Mapping</option>
             </select>
-            <input type='text' placeholder='Send a message' value={input} onKeyDown={handleEnter} onChange={(e) => setInput(e.target.value)} />
+            <input
+              type='text'
+              placeholder='Send a message'
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleEnter}
+            />
             <button className='send' onClick={handleSend}><img src={sendBtn} alt='send' /></button>
           </div>
         </div>
+
+        {/* Map Container */}
+        {option === 'mapping' && (
+          <div
+            className="mapContainer"
+            ref={mapContainer}
+            style={{ height: '500px', width: '100%' }}
+          ></div>
+        )}
       </div>
     </div>
   );
