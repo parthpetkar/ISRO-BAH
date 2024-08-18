@@ -9,6 +9,10 @@ import { useSpring, useTrail, animated, config } from '@react-spring/web';
 import { saveChatToCache, saveCacheToDb, fetchChatFromDb, fetchChats } from './services/api';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faQuestionCircle } from '@fortawesome/free-solid-svg-icons';
+import { htmlToText } from 'html-to-text';
+
 
 function App() {
   const msgEnd = useRef(null);
@@ -63,17 +67,16 @@ function App() {
 
       console.log('API Response:', response); // Log the full response
 
-      // if (!response.data) {
-      //   throw new Error('Response data is undefined');
-      // }
-
       if (option === 'mapping') {
         const generationData = response.data.response_data?.generation_data;
         if (!generationData) {
           throw new Error('No generation data found in response');
         }
 
-        let botResponse = generationData.answer;
+        // Convert the markup response to plain text
+        let botResponse = htmlToText(generationData.answer, {
+          wordwrap: 130
+        });
 
         // Remove everything after "SQL_query"
         const sqlQueryIndex = botResponse.indexOf('SQL_query:');
@@ -100,7 +103,9 @@ function App() {
         }
 
         const botMessages = chatData.map(msg => {
-          let text = msg.text;
+          let text = htmlToText(msg.text, {
+            wordwrap: 130
+          });
 
           // Remove everything after "SQL_query"
           const sqlQueryIndex = text.indexOf('SQL_query:');
@@ -124,7 +129,6 @@ function App() {
       clearSimilarQuestion();
     }
   };
-
   const handleEnter = async (e) => {
     if (e.key === 'Enter') await handleSend();
   };
@@ -163,7 +167,6 @@ function App() {
     }
   };
 
-  // Function to plot the map using Leaflet.js
   // Function to plot the map using Leaflet.js
   const plotMap = (mappingData) => {
     if (mapContainer.current) {
@@ -255,12 +258,6 @@ function App() {
     to: { opacity: 1, transform: 'translate3d(0, 0, 0)' },
   });
 
-  // Input focus effect
-  // const inputFocusAnimation = useSpring({
-  //   borderColor: input ? 'rgba(16, 185, 129, 0.7)' : 'rgba(209, 213, 219, 1)',
-  //   config: { tension: 300, friction: 10 },
-  // });
-
   return (
     <div className="App">
       <animated.div className="sidebar" style={sidebarAnimation}>
@@ -301,7 +298,6 @@ function App() {
           )}
           <div ref={msgEnd}></div>
         </div>
-        {/* Map Container */}
         {option === 'mapping' && (
           <div
             className="mapContainer"
@@ -312,8 +308,9 @@ function App() {
 
         <div className='chatFooter'>
           {similarQuestion && (
-            <div className='similarQuestion' onClick={() => setInput(similarQuestion)}>
-              Similar Question: {similarQuestion}
+            <div className='similarQuestionBox' onClick={() => setInput(similarQuestion)}>
+              <FontAwesomeIcon icon={faQuestionCircle} className='similarQuestionIcon' />
+              <span className='similarQuestionText'>Did you mean: <strong>{similarQuestion}</strong></span>
             </div>
           )}
           <div className='inp'>
@@ -333,7 +330,6 @@ function App() {
             <button className='send' onClick={handleSend}><img src={sendBtn} alt='send' /></button>
           </div>
         </div>
-
       </div>
     </div>
   );

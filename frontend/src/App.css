@@ -272,18 +272,35 @@ body {
   color: rgba(222, 222, 222, 1);
 }
 
-.similarQuestion {
-  background: rgba(90, 75, 255, 0.2);
+.similarQuestionBox {
+  display: flex;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 1.2rem;
   padding: 1rem;
-  margin: 1rem 0;
-  border-radius: 0.5rem;
+  margin-bottom: 1.5rem;
   cursor: pointer;
-  text-align: center;
-  color: #5A4BFF;
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .similarQuestionBox:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  }
+  
+  .similarQuestionIcon {
+    width: 2rem;
+    height: 2rem;
+    margin-right: 1rem;
+  }
+  
+  .similarQuestionText {
   font-size: 1.4rem;
+  color: #fff;
   font-weight: 500;
 }
 
-.similarQuestion:hover {
-  background: rgba(90, 75, 255, 0.3);
+.similarQuestionText strong {
+  font-weight: 600;
+  color: #ffd700;
 }
