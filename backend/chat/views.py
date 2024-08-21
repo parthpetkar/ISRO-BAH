@@ -15,173 +15,31 @@ question_cache = caches['question']
 # Initialize SentenceTransformer model
 model = SentenceTransformer('all-MiniLM-L6-v2')
 
-
-def assign_message_ids(chat_data: list) -> list:
-    """
-    Assign unique IDs to each message in chat_data.
-
-    Args:
-    chat_data (list): A list of dictionaries representing chat messages. Each dictionary should have a 'text' key and an optional 'id' key.
-   
-    Returns:
-    list: The input chat_data with each message assigned a unique ID.
-    """
-    for message in chat_data:
-        if 'id' not in message:
-            message['id'] = str(uuid.uuid4())
-    return chat_data
-
-
-def process_mapping_query(user_input: str, option: str) -> tuple:
-    """
-    Process the mapping query by sending it to the external API.
-
-    Args:
-    user_input (str): The input query to be processed.
-    option (str): The mode of processing, either 'mapping' or 'generation'.
-
-    Returns:
-    tuple: A tuple containing the response data from the external API and an optional error message.
-    If the response data is not None, it is a dictionary containing the processed query.
-    If there is an error during the API request, the second element of the tuple is a string containing the error message.
-    """
-    api_url = "http://127.0.0.1:5000/api/query"
-    try:
-        response = requests.post(api_url, json={"query": user_input, "mode": option})
-        response.raise_for_status()
-        return response.json(), None
-    except requests.exceptions.RequestException as e:
-        return None, f"External API request error: {str(e)}"
-
-
-def find_best_matching_question(user_input, cached_questions, threshold=0.5):
-    """
-    Find the best matching question from the cached_questions.
-
-    Args:
-    user_input (str): The input query to be matched with cached questions.
-    cached_questions (list): A list of dictionaries containing cached questions. Each dictionary should have a 'question' key and an optional 'data' key.
-    threshold (float, optional): A similarity threshold to determine the best matching question. Defaults to 0.5.
-
-    Returns:
-    dict or None: The dictionary containing the best matching question's data if found, otherwise None.
-    """
-    user_input_vector = model.encode(user_input, convert_to_tensor=True)
-    best_match_data = None
-    best_match_score = 0
-
-    for cached_question in cached_questions:
-        cached_question_vector = model.encode(cached_question['question'], convert_to_tensor=True)
-        similarity = util.pytorch_cos_sim(user_input_vector, cached_question_vector).item()
-        if similarity > threshold and similarity > best_match_score:
-            best_match_data = cached_question['data']
-            best_match_score = similarity
-
-    return best_match_data
-
-
-def optimize_query(user_input: str) -> tuple:
-    """
-    Optimize the user query using an external API.
-
-    Args:
-    user_input (str): The input query to be optimized.
-
-    Returns:
-    tuple: A tuple containing the optimized query or the original query if no optimization is performed, and an optional error message.
-    If the response data is not None, it is a string containing the optimized query.
-    If there is an error during the API request, the second element of the tuple is a string containing the error message.
-    """
-    query_optimization_url = "http://127.0.0.1:5050/process_query"
-    try:
-        response = requests.post(query_optimization_url, json={"query": user_input})
-        response.raise_for_status()
-        return response.json().get('optimized_query', user_input), None
-    except requests.exceptions.RequestException as e:
-        return None, f"Query optimization API request error: {str(e)}"
-
-
-def fetch_response_from_external_api(query, option):
-    """
-    Fetch the response from an external API based on the query and option.
-
-    Args:
-    query (str): The input query to be processed.
-    option (str): The mode of processing, either 'mapping' or 'generation'.
-
-    Returns:
-    tuple: A tuple containing the response data from the external API and an optional error message.
-    If the response data is not None, it is a dictionary containing the processed query.
-    If there is an error during the API request, the second element of the tuple is a string containing the error message.
-    """
-    external_api_url = "http://127.0.0.1:5000/api/query"
-    try:
-        response = requests.post(external_api_url, json={"query": query, "mode": option})
-        response.raise_for_status()
-        return response.json(), None
-    except requests.exceptions.RequestException as e:
-        return None, f"External API request error: {str(e)}"
-
-
-def handle_top_3_questions(top_3_questions, cached_questions):
-    """
-    Send each top 3 questions to an external API and save responses.
-
-    Args:
-    top_3_questions (list): A list of strings containing the top 3 questions to be sent to the external API.
-    cached_questions (list): A list of dictionaries containing cached questions. Each dictionary should have a 'question' key and an optional 'data' key.
-
-    Returns:
-    None: This function does not return any value. It only sends the top 3 questions to the external API and saves the responses in the 'cached_questions' list.
-
-    Raises:
-    requests.exceptions.RequestException: If there is an error during the API request, this exception will be raised.
-
-    Note:
-    This function uses the 'requests' library to send HTTP requests to the external API. It also assumes that there is a 'question_cache' object that can be used to store the 'cached_questions' list.
-    """
-    external_api_url = "http://127.0.0.1:5000/api/query"
-    for question in top_3_questions:
-        if question:
-            try:
-                response = requests.post(external_api_url, json={"query": question, "mode": "generation"})
-                response.raise_for_status()
-                question_response_data = response.json()
-                cached_questions.append({
-                    'question': question,
-                    'data': question_response_data
-                })
-            except requests.exceptions.RequestException:
-                continue  # Ignore errors for individual question responses
-    question_cache.set('cached_questions', cached_questions)
-
-
 @api_view(['GET'])
 def list_chats(request):
     """
-    Retrieves a list of all chats in descending order of their creation timestamp.
+    Retrieve and return a list of all chats in the database, sorted by creation date in descending order.
 
-    Args:
-    request (Request): The HTTP request object. This object is used to retrieve the data passed in the request.
+    Parameters:
+    request (Request): The incoming request object containing any query parameters or data.
 
     Returns:
-    Response: An HTTP response containing a JSON representation of the list of chats. The response status code is set to 200 (OK).
+    Response: A response object containing the serialized data of all chats. The HTTP status code is set to 200 OK.
     """
     chats = Chat.objects.all().order_by('-created_at')
     serializer = ChatSerializer(chats, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
-
 @api_view(['POST'])
 def save_chat(request):
     """
-    Saves a chat to the database.
+    Save a chat message to the database.
 
-    Args:
-    request (Request): The HTTP request object. This object is used to retrieve the data passed in the request.
+    Parameters:
+    request (Request): The incoming request object containing the chat message data.
 
     Returns:
-    Response: An HTTP response containing a JSON representation of the saved chat. The response status code is set to 201 (Created) if the chat is successfully saved, or 400 (Bad Request) if the chat data is invalid.
+    Response: A response object containing the serialized data of the saved chat message. The HTTP status code is set to 201 CREATED if the chat message is successfully saved, or 400 BAD REQUEST if the chat message data is invalid.
     """
     serializer = ChatSerializer(data=request.data)
     if serializer.is_valid():
@@ -189,23 +47,20 @@ def save_chat(request):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 @api_view(['POST'])
 def save_chat_to_cache(request):
     """
-    Saves a chat to the cache and returns a response with the saved chat data, similar question, and status.
-    
-    Args:
-    request (Request): The HTTP request object. This object is used to retrieve the data passed in the request.
-    
+    Save chat message to cache.
+
+    This function takes a JSON object containing the chat data and an optional parameter 'option' which defaults to 'Generation'.
+    The function processes the chat data, saves it to cache, and returns a response with the chat data and a similar question if available.
+
+    Parameters:
+    - chat_data (dict): A JSON object containing the chat data.
+    - option (str, optional): An optional parameter specifying the mode for processing the chat data. Defaults to 'Generation'.
+
     Returns:
-    Response: An HTTP response containing a JSON representation of the saved chat data, similar question, and status. The response status code is set to 200 (OK) if the chat is successfully saved, or 400 (Bad Request) if the chat data is invalid.
-    
-    Raises:
-    requests.exceptions.RequestException: If there is an error during the API request, this exception will be raised.
-    
-    Note:
-    This function uses the 'requests' library to send HTTP requests to the external API. It also assumes that there is a 'question_cache' object that can be used to store the 'cached_questions' list.
+    - Response: A Django REST Framework response object containing the chat data and a similar question if available.
     """
     chat_data = request.data.get('chat_data')
     option = request.data.get('option', 'Generation')
@@ -214,32 +69,62 @@ def save_chat_to_cache(request):
         return Response({"status": "No chat data provided"}, status=status.HTTP_400_BAD_REQUEST)
 
     # Assign unique IDs to messages
-    chat_data = assign_message_ids(chat_data)
+    for message in chat_data:
+        message['id'] = str(uuid.uuid4())
 
     user_input = chat_data[-1].get('text')
     if option == 'mapping':
-        response_data, error = process_mapping_query(user_input, option)
-        if error:
-            return Response({"status": error}, status=status.HTTP_502_BAD_GATEWAY)
-        return Response({"status": "Chat saved to cache", "response_data": response_data}, status=status.HTTP_200_OK)
+        api_url = "http://127.0.0.1:5000/api/query"
+        try:
+            response = requests.post(api_url, json={"query": user_input, "mode": option})
+            response.raise_for_status()
+            response_data = response.json()
+            return Response({"status": "Chat saved to cache", "response_data": response_data}, status=status.HTTP_200_OK)
+        except requests.exceptions.RequestException as e:
+            return Response({"status": f"External API request error: {str(e)}"}, status=status.HTTP_502_BAD_GATEWAY)
 
     try:
         # Retrieve cached questions from the cache
         cached_questions = question_cache.get('cached_questions', [])
-        matched_question_data = find_best_matching_question(user_input, cached_questions)
+        matched_question_data = None
+        
+        # Convert user input to vector
+        user_input_vector = model.encode(user_input, convert_to_tensor=True)
+        threshold = 0.5
+        best_match_score = 0
+        
+        # Check if the user_input matches any question in the cached_questions list
+        for cached_question in cached_questions:
+            cached_question_vector = model.encode(cached_question['question'], convert_to_tensor=True)
+            similarity = util.pytorch_cos_sim(user_input_vector, cached_question_vector).item()
+            if similarity > threshold and similarity > best_match_score:
+                matched_question_data = cached_question['data']
+                best_match_score = similarity
 
         if matched_question_data:
+            # Retrieve response from the cache
+            print(matched_question_data)
             bot_response = matched_question_data.get('answer', 'No response from cached data')
             similar_question = matched_question_data.get('highest_similar_question', '')
         else:
-            optimized_query, error = optimize_query(user_input)
-            if error:
-                return Response({"status": error}, status=status.HTTP_502_BAD_GATEWAY)
+            # Process query and get response from external APIs
+            query_optimization_url = "http://127.0.0.1:5050/process_query"
+            try:
+                response = requests.post(query_optimization_url, json={"query": user_input})
+                response.raise_for_status()
+                query_response_data = response.json()
+                optimized_query = query_response_data.get('optimized_query', user_input)
+            except requests.exceptions.RequestException as e:
+                return Response({"status": f"Query optimization API request error: {str(e)}"}, status=status.HTTP_502_BAD_GATEWAY)
 
-            response_data, error = fetch_response_from_external_api(optimized_query, option)
-            if error:
-                return Response({"status": error}, status=status.HTTP_502_BAD_GATEWAY)
-            bot_response = response_data.get('answer', 'No response from second API')
+            external_api_url = "http://127.0.0.1:5000/api/query"
+            try:
+                response = requests.post(external_api_url, json={"query": optimized_query, "mode": option})
+                response.raise_for_status()
+                response_data = response.json()
+                bot_response = response_data.get('answer', 'No response from second API')
+            except requests.exceptions.RequestException as e:
+                return Response({"status": f"External API request error: {str(e)}"}, status=status.HTTP_502_BAD_GATEWAY)
 
             send_data_api_url = "http://127.0.0.1:5060/ask"
             try:
@@ -249,11 +134,31 @@ def save_chat_to_cache(request):
             except requests.exceptions.RequestException as e:
                 return Response({"status": f"Send data API request error: {str(e)}"}, status=status.HTTP_502_BAD_GATEWAY)
 
-            handle_top_3_questions(api_response_data.get('top_3_questions', []), cached_questions)
+            # Send each question in top_3_questions to external_api_url and save responses
+            top_3_questions = api_response_data.get('top_3_questions', [])
+            for question in top_3_questions:
+                if question:
+                    try:
+                        response = requests.post(external_api_url, json={"query": question, "mode": "generation"})
+                        response.raise_for_status()
+                        question_response_data = response.json()
+                        # Save each question and its response
+                        cached_questions.append({
+                            'question': question,
+                            'data': question_response_data
+                        })
+                    except requests.exceptions.RequestException as e:
+                        return Response({"status": f"Question API request error: {str(e)}"}, status=status.HTTP_502_BAD_GATEWAY)
+
+            # Cache the new response with all questions and their responses
+            question_cache.set('cached_questions', cached_questions)
+
             similar_question = api_response_data.get('highest_similar_question', '')
 
+        # Handle question cache
         question_cache.delete('current_chat')
 
+        # Append bot response to chat_data
         bot_message_id = str(uuid.uuid4())
         chat_data.append({
             "id": bot_message_id,
@@ -264,7 +169,8 @@ def save_chat_to_cache(request):
     except Exception as e:
         return Response({"status": f"Unexpected error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    last_response = chat_data[-1]
+    # Save the last response to cache
+    last_response = chat_data[-1]  # Assuming the last response is the bot's message
     default_cache.set('current_chat', [last_response])
 
     return Response({"status": "Chat saved to cache", "chat_data": [last_response], "similar_question": similar_question}, status=status.HTTP_200_OK)
@@ -272,18 +178,15 @@ def save_chat_to_cache(request):
 @api_view(['POST'])
 def save_cache_to_db(request):
     """
-    Saves the chat data from the cache to the database and returns a response with the saved chat ID.
-    
-    Args:
-    request (Request): The HTTP request object. This object is used to retrieve the data passed in the request.
-    chat_data (list): A list of dictionaries containing the chat data. Each dictionary should have 'text' and 'isBot' keys.
-    chat_id (int, optional): The ID of the chat to be saved. If not provided, a new chat will be created.
-    
+    Save the chat data from cache to the database.
+
+    Parameters:
+    - request (Request): The incoming request object containing the chat data and an optional parameter 'chat_id'.
+    - chat_data (dict): A JSON object containing the chat data.
+    - chat_id (int, optional): An optional parameter specifying the ID of the chat to be saved. Defaults to None.
+
     Returns:
-    Response: An HTTP response containing a JSON representation of the saved chat ID. The response status code is set to 200 (OK) if the chat is successfully saved, or 400 (Bad Request) if the chat data is invalid.
-    
-    Raises:
-    Chat.DoesNotExist: If the chat with the provided ID does not exist, this exception will be raised.
+    - Response: A Django REST Framework response object containing the chat data and a status message.
     """
     chat_data = default_cache.get('current_chat')
     chat_id = request.data.get('chat_id')
@@ -305,22 +208,21 @@ def save_cache_to_db(request):
     except Chat.DoesNotExist:
         return Response({"error": "Chat not found"}, status=status.HTTP_404_NOT_FOUND)
 
-
 @api_view(['GET'])
 def fetch_chat_from_db(request, chat_id: int) -> Response:
     """
-    Retrieves a chat from the database based on the provided chat ID.
+    Retrieve a chat message from the database by its ID.
 
-    Args:
-    request (Request): The HTTP request object. This object is used to retrieve the data passed in the request.
-
-    chat_id (int): The unique identifier of the chat to be retrieved from the database.
+    Parameters:
+    - request (Request): The incoming request object containing the chat ID.
+    - chat_id (int): The unique identifier of the chat message to be retrieved.
 
     Returns:
-    Response: An HTTP response containing a JSON representation of the chat's input and response pairs. The response status code is set to 200 (OK) if the chat is successfully retrieved, or 404 (Not Found) if the chat with the provided ID does not exist.
+    - Response: A Django REST Framework response object containing the chat message data. If the chat message is not found, the response will contain an error message with status code 404 NOT FOUND.
     """
     try:
         chat = Chat.objects.get(id=chat_id)
         return Response(chat.input_response_pairs, status=status.HTTP_200_OK)
     except Chat.DoesNotExist:
         return Response({"error": "Chat not found"}, status=status.HTTP_404_NOT_FOUND)
+
