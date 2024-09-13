@@ -17,11 +17,10 @@ This project was bult for ISRO's Bharatiya Antariskh Hackathon 2024.
 
 ## Contributors
 - [Parth Petkar](https://github.com/parthpetkar)
-- [Parth Kalani](https://github.com/contributor))
+- [Parth Kalani](https://github.com/contributor)
 - [Hritesh Maikap](https://github.com/hriteshMaikap)
 - [Nidhish Wakodikar](https://github.com/contributor)
 
-)
 ## Badges
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Build Status](https://travis-ci.com/parthpetkar/Invoice-Generator-using-Electron.js.svg?branch=main)](https://github.com/parthpetkar/Invoice-Generator-using-Electron.js)
